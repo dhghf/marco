@@ -1,2 +1,2 @@
-export { DBController } from './DBController';
-export { BridgeTable } from './tables/BridgeTable';
+export { default as DBController } from './DBController';
+export { default as BridgeTable } from './tables/BridgeTable';

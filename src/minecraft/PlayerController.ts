@@ -1,19 +1,21 @@
-import { Player } from "./internal/Player";
-import type { Intent } from "matrix-bot-sdk";
-import { LogService } from "matrix-bot-sdk";
+import type { Intent } from 'matrix-bot-sdk';
+import { LogService } from 'matrix-bot-sdk';
+import { Player } from './index';
 
-
+// ignore - some legacy stuff
 type MarcoProfile = {
   skin: string;
 }
 
+const MAX_NAME_LENGTH = 16;
+
 /**
- * The PlayerManager class handles interaction with the Mojang API to get
+ * The PlayerController class handles interaction with the Mojang API to get
  * all the player details of a certain player on Minecraft. It even goes to
  * the extent of cropping the head out of a player's skin to keep their
  * Matrix puppet in sync
  */
-export class PlayerManager {
+export default class PlayerController {
   private readonly players: Map<string, Player>;
 
   constructor() {
@@ -30,25 +32,37 @@ export class PlayerManager {
    let player = getPlayer(null, "5bce3068e4f3489fb66b5723b2a7cdb1");
    // OR
    player = getPlayer("dhmci");
+   // OR
+   player = getPlayer("5bce3068e4f3489fb66b5723b2a7cdb1")
 
-   * @param {?string} name Player's name
-   * @param {?string} uuid Player's UUID
+   * @param {string} identifier Player's name or UUID
    * @returns {Promise<void>}
-   * @throws {Error} if both parameters are undefined
+   * @throws {Error} if the identifier provided doesn't look right
    */
-  public async getPlayer(name?: string, uuid?: string): Promise<Player> {
-    let player = this.players.get(uuid || '');
+  public async getPlayer(identifier: string): Promise<Player> {
+    // if identifier is a UUID
+    if (identifier.length > MAX_NAME_LENGTH) {
+      const uuid = identifier.replace('-', '');
+      let player = this.players.get(uuid || '');
 
-    if (player)
-      return player;
-    else if (!name && !uuid)
-      throw new Error('Both parameters can not be undefined');
-    else {
-      player = new Player(name, uuid);
-      uuid = await player.getUUID();
+      if (player) {
+        return player;
+      }
+
+      player = new Player(uuid);
       this.players.set(uuid, player);
+      await player.getName();
+
       return player;
     }
+
+    // if identifier is a name
+    const name = identifier;
+    const player = new Player(name, '');
+    const uuid = await player.getUUID();
+
+    this.players.set(uuid, player);
+    return player;
   }
 
   /**
@@ -58,25 +72,24 @@ export class PlayerManager {
    * @param {Player} player The player being mimicked
    * @returns {Promise<void>}
    */
-  public async sync(intent: Intent, player: Player): Promise<void> {
+  public static async sync(intent: Intent, player: Player): Promise<void> {
     const mxProfile = await intent.underlyingClient.getUserProfile(
-      intent.userId
+      intent.userId,
     );
     const playerName = await player.getName();
-    const mxName: string | undefined = mxProfile['displayname'];
+    const mxName: string | undefined = mxProfile.displayname;
     let storedSkin;
     try {
-      let marcoProfile: MarcoProfile = await intent.underlyingClient.getAccountData(
-        "dev.dhdf.marco"
+      const marcoProfile: MarcoProfile = await intent.underlyingClient.getAccountData(
+        'dev.dylhack.marco',
       );
       storedSkin = marcoProfile.skin || '';
     } catch (err) {
       storedSkin = '';
     }
 
-
     // Sync display name with in-game player name
-    if (mxName != playerName) {
+    if (mxName !== playerName) {
       await intent.underlyingClient.setDisplayName(playerName);
     }
 
@@ -88,19 +101,19 @@ export class PlayerManager {
     const currentSkin = await player.getSkinURL();
 
     LogService.debug(
-      'marco-PlayerManager',
-      `Player's current skin:\n${currentSkin}\n` +
-      `Player's stored skin:\n${storedSkin}\n` +
-      `Difference? ${storedSkin == currentSkin ? 'no' : 'yes'}`
+      'PlayerController',
+      `Player's current skin:\n${currentSkin}\n`
+      + `Player's stored skin:\n${storedSkin}\n`
+      + `Difference? ${storedSkin === currentSkin ? 'no' : 'yes'}`,
     );
 
-    if (storedSkin != currentSkin) {
+    if (storedSkin !== currentSkin) {
       // This will get the skin and crop the head out (see getHead method)
       const head = await player.getHead();
       // This will get sent to the Intent's account data so we can use it
       // to see if their base64 encoding has updated in the future
       const marcoProfile: MarcoProfile = {
-        skin: currentSkin
+        skin: currentSkin,
       };
 
       // This represents their new Matrix-content-url (mxc) which can be
@@ -108,14 +121,13 @@ export class PlayerManager {
       const mxUrl = await intent.underlyingClient.uploadContent(
         head,
         'image/png', // All skins are in PNG format
-        playerName + '-head.png'
+        `${playerName}-head.png`,
       );
-      await intent.underlyingClient.setAvatarUrl(mxUrl)
+      await intent.underlyingClient.setAvatarUrl(mxUrl);
       await intent.underlyingClient.setAccountData(
-        "dev.dhdf.marco",
-        marcoProfile
+        'dev.dhdf.marco',
+        marcoProfile,
       );
     }
   }
 }
-

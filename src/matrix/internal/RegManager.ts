@@ -1,20 +1,18 @@
-import { Config } from "../../Config";
-import type { IAppserviceRegistration } from "matrix-bot-sdk";
-import fs from "fs";
-import * as yaml from "yaml";
-import { v4 as uuid } from "uuid";
-import mkdirp from "mkdirp";
-
+import type { IAppserviceRegistration } from 'matrix-bot-sdk';
+import fs from 'fs';
+import * as yaml from 'yaml';
+import { v4 as uuid } from 'uuid';
+import mkdirp from 'mkdirp';
+import { Config } from '../../Config';
 
 /**
  * Appservice register manager. It makes sure it generates and gets the
  * right registration file to interact with a Matrix server.
  */
-export class RegManager {
+export default class RegManager {
   private static readonly regRoot = Config.configRoot;
-  private static readonly defaultPath = RegManager.regRoot + '/appservice.yaml'
 
-  constructor() {}
+  private static readonly defaultPath = `${RegManager.regRoot}/appservice.yaml`
 
   public static getRegistration(config: Config): IAppserviceRegistration {
     const location = config.appservice.regPath;
@@ -23,9 +21,8 @@ export class RegManager {
       const regBuff = fs.readFileSync(location);
 
       return yaml.parse(regBuff.toString());
-    } else {
-      return RegManager.genRegistration();
     }
+    return RegManager.genRegistration();
   }
 
   /**
@@ -39,21 +36,20 @@ export class RegManager {
       as_token: uuid(),
       hs_token: uuid(),
       id: uuid(),
-      url: `http://localhost:3051`,
+      url: 'http://localhost:3051',
       namespaces: {
         aliases: [],
         rooms: [],
         users: [{
           exclusive: true,
-          regex: '@_mc_.*'
-        }]
+          regex: '@_mc_.*',
+        }],
       },
       protocols: ['minecraft'],
       rate_limited: false,
-      sender_localpart: "_mc_bot"
+      sender_localpart: '_mc_bot',
     };
-    if (!fs.existsSync(RegManager.regRoot))
-      mkdirp.sync(RegManager.defaultPath);
+    if (!fs.existsSync(RegManager.regRoot)) mkdirp.sync(RegManager.defaultPath);
 
     fs.writeFileSync(RegManager.defaultPath, yaml.stringify(reg));
 

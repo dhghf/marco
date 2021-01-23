@@ -15,5 +15,8 @@
         "@typescript-eslint"
     ],
     "rules": {
+        "import/no-unresolved": "off",
+        "import/extensions": "off",
+        "max-classes-per-file": "off"
     }
 }
