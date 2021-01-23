@@ -33,18 +33,24 @@ export class PlayerManager {
 
    * @param {?string} name Player's name
    * @param {?string} uuid Player's UUID
+   * @param {?string} displayName Player's display name (nick)
+   * @param {?string} texture Player's base64 encoded texture (skin)
    * @returns {Promise<void>}
    * @throws {Error} if both parameters are undefined
    */
-  public async getPlayer(name?: string, uuid?: string): Promise<Player> {
+  public async getPlayer(name?: string, uuid?: string, displayName?: string, texture?: string): Promise<Player> {
     let player = this.players.get(uuid || '');
 
-    if (player)
+    if (player) {
+      if (displayName)
+        player.setDisplayName(displayName);
+      if (texture)
+        player.setTexture(texture);
       return player;
-    else if (!name && !uuid)
+    } else if (!name && !uuid)
       throw new Error('Both parameters can not be undefined');
     else {
-      player = new Player(name, uuid);
+      player = new Player(name, uuid, displayName, texture);
       uuid = await player.getUUID();
       this.players.set(uuid, player);
       return player;
@@ -62,7 +68,7 @@ export class PlayerManager {
     const mxProfile = await intent.underlyingClient.getUserProfile(
       intent.userId
     );
-    const playerName = await player.getName();
+    const playerDisplayName = await player.getDisplayName();
     const mxName: string | undefined = mxProfile['displayname'];
     let storedSkin;
     try {
@@ -74,10 +80,16 @@ export class PlayerManager {
       storedSkin = '';
     }
 
+    LogService.debug(
+      'marco-PlayerManager',
+      `Player's current displayName:\n${playerDisplayName}\n` +
+      `Player's matrix displayName:\n${mxName}\n` +
+      `Difference? ${mxName == playerDisplayName ? 'no' : 'yes'}`
+    );
 
     // Sync display name with in-game player name
-    if (mxName != playerName) {
-      await intent.underlyingClient.setDisplayName(playerName);
+    if (mxName != playerDisplayName) {
+      await intent.underlyingClient.setDisplayName(playerDisplayName);
     }
 
     // Sync their Matrix's avatar with their in-game skin ...
@@ -105,6 +117,7 @@ export class PlayerManager {
 
       // This represents their new Matrix-content-url (mxc) which can be
       // used to set their Matrix user's avatar
+      const playerName = await player.getName();
       const mxUrl = await intent.underlyingClient.uploadContent(
         head,
         'image/png', // All skins are in PNG format

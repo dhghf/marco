@@ -151,13 +151,15 @@ The provided JSON web token describes what room the server is bridged with.
 | player    | Player | The player who sent the message       |
 
 ##### Player Object:
-This describes the player who sent the message, all the attributes must not
+This describes the player who sent the message, the name and uuid must not
 be null or undefined.
 
-| Attribute | Type   | Description            |
-|-----------|--------|------------------------|
-| name      | string | The name of the player |
-| uuid      | string | The UUID of the player |
+| Attribute   | Type   | Description                          |
+|-------------|--------|--------------------------------------|
+| name        | string | The name of the player               |
+| uuid        | string | The UUID of the player               |
+| displayName | string | Optional display name of the player  |
+| texture     | string | Optional base64 encoded texture info |
 
 #### Response Body:
 None (200 OK)

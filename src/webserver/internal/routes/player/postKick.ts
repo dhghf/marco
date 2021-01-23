@@ -31,8 +31,8 @@ export async function postKick(req: Request, res: Response): Promise<void> {
   const id: string = req['id'];
   const body = req.body;
   const reason: string = body['reason'];
-  const playerRaw: { name: string, uuid: string } = body.player;
-  const player = await main.players.getPlayer(playerRaw.name, playerRaw.uuid);
+  const playerRaw: { name: string, uuid: string, displayName?: string, texture?: string } = body.player;
+  const player = await main.players.getPlayer(playerRaw.name, playerRaw.uuid, playerRaw.displayName, playerRaw.texture);
   const mcKick: MCEvents.Kick = {
     reason,
     player

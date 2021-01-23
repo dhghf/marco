@@ -12,10 +12,22 @@ import * as Endpoints from "./endpoints";
 export class Player {
   private name: string | null;
   private uuid: string | null;
+  private displayName?: string;
+  private texture?: string;
 
-  public constructor(name?: string, uuid?: string) {
+  public constructor(name?: string, uuid?: string, displayName?: string, texture?: string) {
     this.name = name || null;
     this.uuid = uuid || null;
+    this.displayName = displayName;
+    this.texture = texture;
+  }
+
+  public setDisplayName(displayName: string) {
+    this.displayName = displayName;
+  }
+
+  public setTexture(texture: string) {
+    this.texture = texture;
   }
 
   /**
@@ -68,6 +80,17 @@ export class Player {
   }
 
   /**
+   * This gets the display name chosen by the player.
+   * @returns {Promise<String>}
+   */
+  public async getDisplayName(): Promise<string> {
+    if (this.displayName != null)
+      return this.displayName;
+    else
+      return this.getName();
+  }
+
+  /**
    * Retrieves the name history of this player
    * UUID -> Name history
    * @link https://wiki.vg/Mojang_API#UUID_-.3E_Name_history
@@ -92,6 +115,19 @@ export class Player {
     const uuid = await this.getUUID();
     const name = await this.getName();
     const target = Endpoints.get.profile.replace(/({uuid})/g, uuid);
+
+    // If we already have the texture, we can construct the profile without
+    // resorting to the Mojang API
+    if (this.texture) {
+      return {
+        'id': uuid,
+        'name': name,
+        'properties':  [ {
+          "name" : "textures",
+          "value" : this.texture
+        } ]
+      };
+    }
 
     try {
       const res = await got(target);
