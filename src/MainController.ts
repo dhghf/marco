@@ -1,10 +1,10 @@
-import WebServer from './webserver/WebServer';
+import WebServer from './webserver/server';
 import { Config } from './Config';
 import { Bridge, BridgeManager } from './bridging';
 import { MatrixController } from './matrix';
 import { DBController } from './db';
 import {
-  PlayerManager,
+  PlayerController,
 } from './minecraft';
 import {
   MCServerEvents as MCEvents,
@@ -42,7 +42,7 @@ export default class MainController {
   // player data of a certain Minecraft player. It also is responsible for
   // keeping player's Minecraft appservice user in sync with their player
   // name, skin, etc.
-  public readonly players: PlayerManager;
+  public readonly players: PlayerController;
 
   constructor() {
     const config = Config.getConfig();
@@ -51,7 +51,7 @@ export default class MainController {
     this.webserver = new WebServer(config, this);
     this.matrix = new MatrixController(config, this);
     this.bridges = new BridgeManager(config, db);
-    this.players = new PlayerManager();
+    this.players = new PlayerController();
   }
 
   /**

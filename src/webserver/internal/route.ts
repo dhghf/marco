@@ -1,5 +1,5 @@
 import { Router } from 'express-serve-static-core';
-import Main from '../../Main';
+import Main from '../../MainController';
 
 export default class Route {
   protected router: Router;

@@ -7,7 +7,7 @@ import { Bridge } from '../bridging';
 import CmdManager from './internal/CmdManager';
 import MsgProcessor from './internal/MsgProcessor';
 import type { MxEvents, MCServerEvents as MCEvents } from '../models/types';
-import { PlayerManager } from '../minecraft';
+import { PlayerController } from '../minecraft';
 
 export type MxMessage = {
   sender: string;
@@ -20,7 +20,7 @@ export type MxMessage = {
  * The MatrixManager class has everything to do with Matrix's appservice
  * API and a couple utilities such as checking if a room exists. It's
  * responsible for keeping an appservice user in sync with their
- * corresponding Minecraft player by communicating with the PlayerManager.
+ * corresponding Minecraft player by communicating with the PlayerController.
  * It also stores new room messages in the newMxMessages for the Minecraft
  * server to retrieve periodically.
  */
@@ -89,7 +89,7 @@ export default class MatrixController {
     try {
       await intent.ensureRegistered();
       // Keep the player name, skin in sync with their profile data on Matrix
-      await PlayerManager.sync(intent, mcMessage.player);
+      await PlayerController.sync(intent, mcMessage.player);
 
       // Finally send the message to the room, half of these steps are
       // skipped to this if everything has already been completed before
@@ -132,7 +132,7 @@ export default class MatrixController {
     try {
       await intent.ensureRegistered();
       // Keep the player name, skin in sync with their profile data on Matrix
-      await PlayerManager.sync(intent, mcJoin.player);
+      await PlayerController.sync(intent, mcJoin.player);
 
       // Finally send the message to the room, half of these steps are
       // skipped to this if everything has already been completed before

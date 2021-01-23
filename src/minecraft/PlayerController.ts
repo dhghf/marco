@@ -10,12 +10,12 @@ type MarcoProfile = {
 const MAX_NAME_LENGTH = 16;
 
 /**
- * The PlayerManager class handles interaction with the Mojang API to get
+ * The PlayerController class handles interaction with the Mojang API to get
  * all the player details of a certain player on Minecraft. It even goes to
  * the extent of cropping the head out of a player's skin to keep their
  * Matrix puppet in sync
  */
-export default class PlayerManager {
+export default class PlayerController {
   private readonly players: Map<string, Player>;
 
   constructor() {
@@ -101,7 +101,7 @@ export default class PlayerManager {
     const currentSkin = await player.getSkinURL();
 
     LogService.debug(
-      'marco-PlayerManager',
+      'PlayerController',
       `Player's current skin:\n${currentSkin}\n`
       + `Player's stored skin:\n${storedSkin}\n`
       + `Difference? ${storedSkin === currentSkin ? 'no' : 'yes'}`,
