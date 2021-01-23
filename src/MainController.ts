@@ -1,6 +1,6 @@
 import WebServer from './webserver/server';
 import { Config } from './Config';
-import { Bridge, BridgeManager } from './bridging';
+import { Bridge, BridgeController } from './bridging';
 import { MatrixController } from './matrix';
 import { DBController } from './db';
 import {
@@ -36,7 +36,7 @@ export default class MainController {
   // This is the bridge manager it establishes new bridges, everything
   // should communicate with the BridgeManager to add, remove, or check a
   // bridge establishment.
-  public readonly bridges: BridgeManager;
+  public readonly bridges: BridgeController;
 
   // The player manager interfaces with the Mojang API to get all the
   // player data of a certain Minecraft player. It also is responsible for
@@ -50,7 +50,7 @@ export default class MainController {
 
     this.webserver = new WebServer(config, this);
     this.matrix = new MatrixController(config, this);
-    this.bridges = new BridgeManager(config, db);
+    this.bridges = new BridgeController(config, db);
     this.players = new PlayerController();
   }
 

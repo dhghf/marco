@@ -6,12 +6,12 @@ import { Config } from '../Config';
 import { BridgeTable, DBController } from '../db';
 
 /**
- * The BridgeManager validates bridging between a Minecraft server and
+ * The BridgeController validates bridging between a Minecraft server and
  * corresponding Matrix room. It's important to communicate with the
- * BridgeManager before interacting with a room or Minecraft server to make
+ * BridgeController before interacting with a room or Minecraft server to make
  * sure the interactions are valid.
  */
-export default class BridgeManager {
+export default class BridgeController {
   private readonly db: BridgeTable;
 
   private readonly config: Config;
