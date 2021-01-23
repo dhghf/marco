@@ -1,4 +1,4 @@
-import bent, { RequestFunction } from 'bent';
+import got from 'got';
 import sharp from "sharp";
 import { Responses, Skin, Texture } from './types';
 import * as Endpoints from "./endpoints";
@@ -42,12 +42,12 @@ export class Player {
       return this.uuid;
     else {
       const name = await this.getName();
-      const getJSON = bent('json') as RequestFunction<Responses.UUID>;
       const target = Endpoints.get.uuid.replace(/({playername})/g, name);
-      const res = await getJSON(target);
+      const res = await got(target);
+      const body = JSON.parse(res.body) as Responses.UUID;
 
-      this.uuid = res.id;
-      return res.id;
+      this.uuid = body.id;
+      return body.id;
     }
   }
 
@@ -74,11 +74,12 @@ export class Player {
    * @returns {Promise<NameHistory>}
    */
   public async getNameHistory(): Promise<Responses.NameHistory> {
-    const getJSON = bent('json') as RequestFunction<Responses.NameHistory>;
     const uuid = await this.getUUID();
     const target = Endpoints.get.nameHistory.replace(/({uuid})/g, uuid);
+    const res = await got(target);
+    const body = JSON.parse(res.body) as Responses.NameHistory;
 
-    return getJSON(target);
+    return body;
   }
 
   /**
@@ -88,13 +89,14 @@ export class Player {
    * @returns {Promise<Profile>}
    */
   public async getProfile(): Promise<Responses.Profile> {
-    const getJSON = bent('json') as RequestFunction<Responses.Profile>
     const uuid = await this.getUUID();
     const name = await this.getName();
     const target = Endpoints.get.profile.replace(/({uuid})/g, uuid);
 
     try {
-      return await getJSON(target);
+      const res = await got(target);
+      const body = JSON.parse(res.body) as Responses.Profile;
+      return body;
     } catch (err) {
       const texture: Skin = {
         'timestamp' : 0,
@@ -127,18 +129,19 @@ export class Player {
    * @throws {Error} if there is no custom skin
    */
   public async getSkin(): Promise<Buffer> {
-    let profile = await this.getProfile();
+    const profile = await this.getProfile();
+
     if (profile.properties.length >= 1) {
       let texture = profile.properties[0];
       let parsed = Player.parseTexture(texture);
 
       if (parsed.textures.SKIN) {
-        const getBuffer = bent('buffer');
         const target = new URL(parsed.textures.SKIN.url);
 
         target.protocol = 'https';
 
-        return await getBuffer(target.toString()) as Buffer;
+        const res = await got(target.toString(), { body: 'buffer' });
+        return Buffer.from(res.body);
       } else {
         throw new Error('No custom skin');
       }
