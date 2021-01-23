@@ -1,5 +1,6 @@
 import * as matrix from "matrix-bot-sdk";
 import { LogService } from "matrix-bot-sdk";
+import { ProfileCache, MatrixProfile } from "matrix-bot-sdk";
 import { RegManager } from "./internal/RegManager";
 import { Config } from "../Config";
 import type { Main } from "../Main";
@@ -35,12 +36,14 @@ export class MatrixInterface {
   // Converts matrix messages into McMessages
   private readonly msgProcessor: MsgProcessor;
 
+  private readonly profileCache: ProfileCache;
+
 
   constructor(config: Config, marco: Main) {
     let registration = RegManager.getRegistration(config);
 
     this.main = marco;
-    this.msgProcessor = new MsgProcessor(this);
+    this.msgProcessor = new MsgProcessor(this, config);
     this.appservice = new matrix.Appservice({
       registration,
       bindAddress: config.appservice.bindAddress,
@@ -50,6 +53,8 @@ export class MatrixInterface {
     });
     this.cmdManager = new CmdManager(this.appservice, this.main, config);
     this.newMxMessages = new Map();
+    this.profileCache = new ProfileCache(128, 30*1000*1000, this.appservice.botClient);
+    this.profileCache.watchWithAppservice(this.appservice);
   }
 
   /**
@@ -65,6 +70,141 @@ export class MatrixInterface {
     this.appservice.on('query.user', this.onQueryUser.bind(this));
 
     await this.appservice.begin();
+  }
+
+  /**
+   * Escape plain text for use in HTML.
+   * This replace &, <, >, ', and " with the corresponding HTML entities.
+   * @param {string} text The plain text to escape
+   * @returns {string} HTML escaped version of plain text
+   */
+  public htmlEscape(text: string): string
+  {
+    const replacement: { [key: string]: string } = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&apos;',
+    };
+    return text.replace(/[&<>"']/g, function(ent: string): string {
+      return replacement[ent] || ent;
+    });
+  }
+
+  /**
+   * This intakes a Minecraft chat message and formats it as a matrix message.
+   * Implemented with help from https://minecraft.gamepedia.com/Formatting_codes
+   * @param {MCEvents.Message} mcMessage
+   * @returns {any} Matrix m.room.message content
+   */
+  public formatMcMessage(mcMessage: MCEvents.Message): any {
+    let content: {msgtype:string,body:string,format?:string,formatted_body?:string} = {
+      msgtype: "m.text",
+      body: mcMessage.message,
+    };
+    // Interpret and strip any Minecraft formatting codes from the body,
+    // producing corresponding Matrix HTML for it if necessary.
+    let useFormatting: boolean = false;
+    let formatted = '';
+    let body = '';
+    let tags: string[] = [];
+    let pendingTags: string[] = [];
+    let pendingTagsStr: string = '';
+    const regex = /(\u00a7(.))?([^\u00a7]*)/g;
+    const matches = content.body.matchAll(regex);
+    for (const match of matches) {
+      let fmt = match[2];
+      const lit = match[3];
+      if (fmt) {
+        let colourCode;
+        let htmlTag;
+        let reset: boolean = false;
+        fmt = fmt.toLowerCase();
+        switch (fmt) {
+          // Colour codes
+          case '0': case '1': case '2': case '3':
+          case '4': case '5': case '6': case '7':
+          case '8': case '9': {
+            colourCode = fmt.charCodeAt(0) - '0'.charCodeAt(0);
+            break;
+          }
+          case 'a': case 'b':
+          case 'c': case 'd': case 'e': case 'f': {
+            colourCode = 0xa + fmt.charCodeAt(0) - 'a'.charCodeAt(0);
+            break;
+          }
+
+          // Formatting codes
+          case 'l': htmlTag = 'b';      break; // bold
+          case 'm': htmlTag = 'strike'; break; // strikethrough
+          case 'n': htmlTag = 'u';      break; // underline
+          case 'o': htmlTag = 'i';      break; // italic
+
+          // Reset code
+          case 'r': reset = true; break;
+        }
+
+        if (colourCode !== undefined) {
+          let col = 0x000000;
+          if (colourCode & 0x1) // blue
+            col |= 0x0000AA;
+          if (colourCode & 0x2) // green
+            col |= 0x00AA00;
+          if (colourCode & 0x4) // red
+            col |= 0xAA0000;
+          if (colourCode & 0x8) // light
+            col |= 0x555555;
+          if (colourCode == 6) // gold
+            col |= 0xff0000;
+
+          // Close any open tags (Java Edition only)
+          while (tags.length) {
+            let tag = tags.pop();
+            formatted += `</${tag}>`
+          }
+          pendingTags = ['font'];
+          pendingTagsStr = `<font color="#${col.toString(16).padStart(6, '0')}">`;
+        } else if (htmlTag) {
+          if (pendingTags.indexOf(htmlTag) == -1 ||
+              tags.indexOf(htmlTag) == -1) {
+            pendingTags.push(htmlTag);
+            pendingTagsStr += `<${htmlTag}>`
+          }
+        } else if (reset) {
+          // Close any open tags
+          pendingTags = [];
+          pendingTagsStr = '';
+          while (tags.length) {
+            let tag = tags.pop();
+            formatted += `</${tag}>`
+          }
+        }
+      }
+      if (lit) {
+        // Handle lazy tags
+        formatted += pendingTagsStr;
+        tags = tags.concat(pendingTags);
+        pendingTags = [];
+        pendingTagsStr = '';
+
+        if (tags.length)
+          useFormatting = true;
+        formatted += this.htmlEscape(lit);
+        body += lit;
+      }
+    }
+    content.body = body;
+    if (useFormatting) {
+      // Close any open tags
+      while (tags.length) {
+        let tag = tags.pop();
+        formatted += `</${tag}>`
+      }
+      content.format = 'org.matrix.custom.html';
+      content.formatted_body = formatted;
+    }
+    return content;
   }
 
   /**
@@ -100,9 +240,9 @@ export class MatrixInterface {
       LogService.error('marco-matrix', errMessage);
     } finally {
       // what matters most is that the message gets to the room.
-      await intent.sendText(
+      await intent.sendEvent(
         bridge.room,
-        mcMessage.message
+        this.formatMcMessage(mcMessage)
       );
     }
   }
@@ -232,17 +372,13 @@ export class MatrixInterface {
   }
 
   /**
-   * This gets the m.room.member state event of a provided Matrix ID and room
-   * @param {string} room The room to retrieve the profile data from
+   * This gets the profile of a provided Matrix ID in a room
    * @param {string} user The user being retrieved
+   * @param {string} roomId The room to retrieve the profile data from
    * @returns {Promise<any>}
    */
-  public async getRoomMember(room: string, user: string): Promise<any> {
-    return this.appservice.botClient.getRoomStateEvent(
-      room,
-      'm.room.member',
-      user
-    );
+  public getUserProfile(user: string, roomId: string): Promise<MatrixProfile> {
+    return this.profileCache.getUserProfile(user, roomId);
   }
 
   /**
@@ -251,7 +387,33 @@ export class MatrixInterface {
    * @returns {string}
    */
   public getPlayerUUID(user: string): string | undefined {
+    // The bot mxid looks a bit like a player mxid
+    if (user == this.appservice.botUserId)
+      return undefined;
     return this.appservice.getSuffixForUserId(user);
+  }
+
+  /**
+   * This checks if the user has a power level sufficient for room notifications
+   * @param {string} roomId Room to check
+   * @param {string} userId User checking
+   * @returns {Promise<boolean>}
+   */
+  public async checkRoomNotifyPrivilege(roomId: string, userId: string): Promise<boolean> {
+    const client = this.appservice.botClient;
+    const powerLevels = await client.getRoomStateEvent(roomId, 'm.room.power_levels', '');
+    if (!powerLevels)
+      return false;
+
+    let requiredPower = 50;
+    if (powerLevels['notifications'] && powerLevels['notifications']['room'])
+      requiredPower = powerLevels['notifications']['room'];
+
+    let userPower = 0;
+    if (powerLevels['users'] && powerLevels['users'][userId])
+      userPower = powerLevels['users'][userId];
+
+    return userPower >= requiredPower;
   }
 
   /**

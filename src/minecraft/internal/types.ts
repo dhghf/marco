@@ -19,6 +19,80 @@ export module MxEvents {
     displayName: string;
   }
 
+  export type MinecraftPlayer = {
+    uuid: string;
+  };
+
+  export interface BodyStructRaw<Content> {
+    type: string;
+    content?: Content;
+    [x: string]: any;
+  }
+  export type BodyJson = string | BodyStructRaw<BodyJson> | (string | BodyStructRaw<BodyJson>)[];
+  export type BodyStruct = BodyStructRaw<BodyJson>;
+
+  type BodyJsonArray = (string | BodyStructRaw<BodyJson>)[];
+  export interface BodyStructPrep extends BodyStruct {
+    content: BodyJsonArray;
+    _erase?: false;
+  }
+
+  export interface BodySpan extends BodyStruct {
+    content: BodyJson;
+  }
+  export interface BodyStyle extends BodySpan {
+    type: "style";
+    color?: number;
+    bold?: true;
+    italic?: true;
+    underline?: true;
+    strike?: true;
+    spoiler?: true;
+    code?: true;
+    heading?: number;
+  }
+  export interface BodyLink extends BodySpan {
+    type: "link";
+    href: string;
+  }
+  export interface BodyMention extends BodySpan {
+    type: "mention";
+    room?: boolean;
+    user?: User;
+    bridge?: string;
+  }
+  export interface BodyMentionMinecraft extends BodyMention {
+    bridge: "minecraft";
+    player: MinecraftPlayer;
+  }
+  export interface BodyImg extends BodyStruct {
+    type: "img";
+    src?: string;
+    alt?: string;
+    title?: string;
+  }
+
+  export interface BodyBlock extends BodyStruct {
+    type: "block";
+    content: BodyJson;
+    block: string;
+  }
+  export interface BodyBlockQuote extends BodyBlock {
+    block: "quote";
+  }
+  export interface BodyBlockBullet extends BodyBlock {
+    block: "bullet";
+    n?: number;
+  }
+  export interface BodyBlockInline extends BodyBlock {
+    block: "inline";
+  }
+
+  export interface BodyHorizontalRule extends BodyStruct {
+    type: "horizontalRule";
+    content?: never;
+  }
+
   /**
    * This represents an event from Matrix that Minecraft needs to handle.
    * It is extended depending on the type string.
@@ -37,9 +111,11 @@ export module MxEvents {
    * It is further extended depending on the type string.
    * @type MessageEvent
    * @prop {string} body Message body
+   * @prop bodyJson JSON formatted message body
    */
   export interface MessageEvent extends Event {
     body: string;
+    bodyJson?: BodyJson;
   }
 
   /**

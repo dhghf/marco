@@ -63,39 +63,53 @@ likes, for example showing the displayName but with the MXID in a tooltip.
 This describes a normal text message send by the Matrix sender user. It extends
 the MxEvent object with the following additional fields:
 
-| Attribute | Type   | Description             |
-|-----------|--------|-------------------------|
-| type      | string | must be "message.text". |
-| body      | string | The message itself.     |
+| Attribute | Type     | Description                            |
+|-----------|----------|----------------------------------------|
+| type      | string   | must be "message.text".                |
+| body      | string   | The message itself.                    |
+| bodyJson  | BodyJson | Optional formatted version of message. |
 
 The Minecraft plugin is expected to broadcast the message, prefixing the body
-with the name of the sender.
+(or bodyJson if formatting is supported) with the name of the sender.
+
+See [Message Body JSON Format](./BodyJson.md) for details about the
+interpretation of bodyJson.
 
 ##### message.emote Event:
 This describes an emote message send by the Matrix sender user (e.g. with
 "/me").
 It extends the MxEvent object with the following additional fields:
 
-| Attribute | Type   | Description              |
-|-----------|--------|--------------------------|
-| type      | string | must be "message.emote". |
-| body      | string | The message itself.      |
+| Attribute | Type     | Description                            |
+|-----------|----------|----------------------------------------|
+| type      | string   | must be "message.emote".               |
+| body      | string   | The message itself.                    |
+| bodyJson  | BodyJson | Optional formatted version of message. |
 
 The Minecraft plugin is expected to broadcast the message, prefixing the body
-with e.g. "\*" and the name of the sender.
+(or bodyJson if formatting is supported) with e.g. "\*" and the name of the
+sender.
+
+See [Message Body JSON Format](./BodyJson.md) for details about the
+interpretation of bodyJson.
 
 ##### message.announce Event:
 This describes an announcement message send by a sufficiently privileged Matrix
 sender user (i.e. with "!minecraft announce").
 It extends the MxEvent object with the following additional fields:
 
-| Attribute | Type   | Description                 |
-|-----------|--------|-----------------------------|
-| type      | string | must be "message.announce". |
-| body      | string | The message itself.         |
+| Attribute | Type     | Description                            |
+|-----------|----------|----------------------------------------|
+| type      | string   | must be "message.announce".            |
+| body      | string   | The message itself.                    |
+| bodyJson  | BodyJson | Optional formatted version of message. |
 
 The Minecraft plugin is expected to broadcast the message as if send from the
-Minecraft server console, e.g. prefixing the body with "[Server] ".
+Minecraft server console, e.g. prefixing the body (or bodyJson if formatting is
+supported) with "[Server] ".
+
+See [Message Body JSON Format](./BodyJson.md) for details about the
+interpretation of bodyJson.
 
 ##### player.kick Event:
 This describes the kicking of a Minecraft user from the Matrix room.

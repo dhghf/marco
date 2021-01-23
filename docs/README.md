@@ -10,4 +10,6 @@ Join our Matrix room for discussions!
  will utilize the extra classes to add features.
  2. [Endpoints](./Endpoints.md) These are all the HTTP endpoints that are
  opened by the WebInterface class.
+ 3. [Message Body JSON Format](./BodyJson.md) This is the intermediate JSON
+ format used to represent formatted Matrix message bodies.
 

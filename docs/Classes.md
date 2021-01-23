@@ -78,14 +78,14 @@ Minecraft chat.
 This stores all new Matrix messages in memory for a Minecraft server to come
 and retrieve (see Main.getNewMxMessages)
 
-#### getRoomMember(): any
+#### getUserProfile(): MatrixProfile
 | Parameter | Type   | Description                                |
 |-----------|--------|--------------------------------------------|
+| user      | string | The user profile being retrieved           |
 | room      | string | The room to retrieve the profile data from |
-| user      | string | The user being retrieved                   |
 
-This gets the [`m.room.member` state event](https://matrix.org/docs/spec/client_server/r0.6.1#m-room-member) 
-of a given user in a given room. This is a utility method.
+This gets the cached profile of a provided Matrix ID in a room. This is a
+utility method.
 
 #### onMxMessage(): Promise\<void>
 | Parameter | Type   | Description                     |
