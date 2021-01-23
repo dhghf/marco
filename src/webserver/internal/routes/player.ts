@@ -5,13 +5,12 @@ import express, {
   Request,
   Response,
 } from 'express';
-import { Bridge } from '../../../bridging';
 import Route from '../route';
 import { MCServerEvents as MCEvents } from '../../../models/types';
 import Integrity from '../integrity';
 import { ServerErrors } from '../../../models/errors';
 import MainController from '../../../MainController';
-import { Server } from 'https';
+import { Player } from '../../../minecraft';
 
 class PlayerIntegrity extends Integrity {
   private readonly main: MainController;
@@ -130,9 +129,8 @@ export default class PlayerRoute extends Route {
     const { bridge } = req;
     // @ts-ignore
     const { id } = req;
-    const { body } = req;
-    const playerID: string = body.player;
-    const player = await this.main.players.getPlayer(playerID);
+    // @ts-ignore
+    const player: Player = req;
     const mcJoin: MCEvents.JoinEvent = {
       player,
     };
@@ -161,13 +159,13 @@ export default class PlayerRoute extends Route {
    */
   private async kick(req: Request, res: Response): Promise<void> {
     // @ts-ignore
-    const { bridge }: Bridge = req;
+    const { bridge } = req;
     // @ts-ignore
-    const { id }: string = req;
+    const { id } = req;
+    // @ts-ignore
+    const player: Player = req;
     const { body } = req;
     const { reason } = body;
-    const playerID: string = body.player;
-    const player = await this.main.players.getPlayer(playerID);
     const mcKick: MCEvents.KickEvent = {
       reason,
       player,
@@ -196,12 +194,11 @@ export default class PlayerRoute extends Route {
    */
   private async quit(req: Request, res: Response): Promise<void> {
     // @ts-ignore
-    const { bridge }: Bridge = req;
+    const { bridge } = req;
     // @ts-ignore
-    const { id }: string = req;
-    const { body } = req;
-    const playerID: string = body.player;
-    const player = await this.main.players.getPlayer(playerID);
+    const player: Player = req;
+    // @ts-ignore
+    const { id } = req;
     const mcQuit: MCEvents.QuitEvent = {
       player,
     };
