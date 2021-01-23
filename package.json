@@ -27,7 +27,12 @@
     "@types/node": "^14.0.1",
     "@types/sharp": "^0.25.0",
     "@types/uuid": "^8.3.0",
+    "@typescript-eslint/eslint-plugin": "^4.14.0",
+    "@typescript-eslint/parser": "^4.14.0",
     "babel-jest": "^26.0.1",
+    "eslint": "^7.18.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.22.1",
     "jest": "^26.0.1",
     "ts-jest": "^26.0.0",
     "typescript": "^3.9.2"
