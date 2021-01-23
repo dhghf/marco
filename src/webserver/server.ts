@@ -5,10 +5,10 @@ import { LogService } from 'matrix-bot-sdk';
 import { v1 as uuid } from 'uuid';
 import type { Config } from '../Config';
 import type Main from '../MainController';
-import { NotBridgedError } from '../models/errors';
-import * as Errors from './internal/errors';
+import { BridgeErrors, ServerErrors } from '../models/errors';
 import ChatRoute from './internal/routes/chat';
 import PlayerRoute from './internal/routes/player';
+import VibeCheckRoute from './internal/routes/vibecheck';
 
 export default class WebServer {
   private readonly main: Main
@@ -27,89 +27,22 @@ export default class WebServer {
   public start(app: Router) {
     const chatRoute = new ChatRoute(this.main);
     const playerRoute = new PlayerRoute(this.main);
+    const vibeCheck = new VibeCheckRoute(this.main);
+
     // Vibe check for checking client to server integrity, if it passes the
     // checkAuth method then everything is good
-    app.get('/vibecheck', this.vibeCheck.bind(this));
-
-    // Check all authorization headers at these endpoints
-    app.use('/chat', this.checkAuth.bind(this));
-    app.use('/events', this.checkAuth.bind(this));
-    app.use('/player', this.checkAuth.bind(this));
+    app.get('/vibecheck', vibeCheck.getRouter());
 
     // Chat endpoint for getting messages and posting minecraft chat messages
     app.use('/chat', chatRoute.getRouter());
 
     // Player endpoint for posting minecraft player events
     app.use('/player', playerRoute.getRouter());
-  }
 
-  /**
-   * This intakes an HTTP request that has a bearer token. In that token
-   * should determine whether or not it's bridged with a room. If it is
-   * then we're vibing, otherwise not so much.
-   * @param {Request} req The request object being read from
-   * @param {Response} res The response object being sent to the requester
-   */
-  private vibeCheck(req: Request, res: Response) {
-    const auth = req.header('Authorization');
-    const id = uuid();
-
-    LogService.info('WebInterface', `[Request ${id}]`);
-    LogService.info(
-      'WebInterface',
-      `[Request ${id}]: Endpoint ${req.method} ${req.path}`,
-    );
-
-    try {
-      res.setHeader('Content-Type', 'application/json');
-
-      // Check if they provided an auth token
-      if (!auth) {
-        res.status(401);
-        res.send(Errors.noTokenError);
-        res.end();
-        return;
-      }
-
-      const token = auth.split(' ')[1];
-
-      if (!token) {
-        res.status(401);
-        res.send(Errors.noTokenError);
-        res.end();
-        return;
-      }
-
-      const bridge = this.main.bridges.getBridge(token);
-
-      LogService.info('WebInterface', `[Request ${id}]: Authorized`);
-
-      res.status(200);
-      res.send({
-        status: 'OK',
-        bridge: bridge.room,
-      });
-      res.end();
-    } catch (err) {
-      if (err instanceof NotBridgedError) {
-        LogService.warn(
-          'WebInterface',
-          `[Request ${id}]: Unauthorized`,
-        );
-        res.status(401);
-        res.send(Errors.invalidTokenError);
-        res.end();
-      } else {
-        LogService.error(
-          'marco:WebServer',
-          err,
-        );
-        res.status(500);
-        res.send(Errors.serverError);
-      }
-    }
-
-    LogService.info('WebInterface', `[Request ${id}]: Finished`);
+    // Check all authorization headers at these endpoints
+    app.use('/chat', this.checkAuth.bind(this));
+    app.use('/events', this.checkAuth.bind(this));
+    app.use('/player', this.checkAuth.bind(this));
   }
 
   /**
@@ -162,21 +95,19 @@ export default class WebServer {
       );
 
       // @ts-ignore
-      req.main = this.main;
-      // @ts-ignore
       req.bridge = bridge;
       // @ts-ignore
       req.id = id;
 
       next();
     } catch (err) {
-      if (err instanceof NotBridgedError) {
+      if (err instanceof BridgeErrors.NotBridgedError) {
         res.status(401);
-        res.send(Errors.invalidTokenError);
+        res.send(ServerErrors.invalidTokenError);
         res.end();
       } else {
         res.status(500);
-        res.send(Errors.serverError);
+        res.send(ServerErrors.serverError);
         res.end();
       }
     }

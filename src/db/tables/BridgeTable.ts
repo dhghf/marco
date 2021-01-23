@@ -1,7 +1,7 @@
 import { Database } from 'better-sqlite3';
 import { LogService } from 'matrix-bot-sdk';
 import { Bridge } from '../../bridging';
-import { NotBridgedError } from '../../models/errors';
+import { BridgeErrors } from '../../models/errors';
 
 /**
  * This manages the bridge table in marco.db.
@@ -44,7 +44,7 @@ export default class BridgeTable {
     if (roomID) {
       return new Bridge(id, roomID);
     }
-    throw new NotBridgedError();
+    throw new BridgeErrors.NotBridgedError();
   }
 
   /**

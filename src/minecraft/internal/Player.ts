@@ -38,7 +38,9 @@ export default class Player {
    * @returns {Promise<string>}
    */
   public async getUUID(): Promise<string> {
-    if (this.uuid != null) return this.uuid;
+    if (this.uuid !== null) {
+      return this.uuid;
+    }
 
     const name = await this.getName();
     const target = endpoints.UUID.replace(/({playername})/g, name);
@@ -54,7 +56,9 @@ export default class Player {
    * @returns {Promise<string>}
    */
   public async getName(): Promise<string> {
-    if (this.name != null) return this.name;
+    if (this.name != null) {
+      return this.name;
+    }
 
     const profile = await this.getProfile();
 

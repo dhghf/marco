@@ -48,9 +48,11 @@ export default class PlayerManager {
       if (player) {
         return player;
       }
-      player = new Player(uuid);
 
+      player = new Player(uuid);
       this.players.set(uuid, player);
+      await player.getName();
+
       return player;
     }
 

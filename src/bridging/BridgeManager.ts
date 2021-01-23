@@ -1,7 +1,7 @@
 import * as jose from 'jose';
 import { v1 as uuid } from 'uuid';
 import Bridge from './Bridge';
-import { BridgedAlreadyError } from '../models/errors';
+import { BridgeErrors } from '../models/errors';
 import { Config } from '../Config';
 import { BridgeTable, DBController } from '../db';
 
@@ -66,7 +66,7 @@ export default class BridgeManager {
       this.db.setBridge(id, room);
       return new Bridge(id, room);
     }
-    throw new BridgedAlreadyError();
+    throw new BridgeErrors.BridgedAlreadyError();
   }
 
   /**

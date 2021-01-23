@@ -1,6 +1,6 @@
 import { Appservice } from 'matrix-bot-sdk';
 import Main from '../../MainController';
-import { BridgedAlreadyError } from '../../models/errors';
+import { BridgeErrors } from '../../models/errors';
 import { Config } from '../../Config';
 import {
   MxEvents as MXEvents,
@@ -112,7 +112,7 @@ export default class CmdManager {
   private async bridgeError(room: string, err: any) {
     const client = this.appservice.botClient;
 
-    if (err instanceof BridgedAlreadyError) {
+    if (err instanceof BridgeErrors.BridgedAlreadyError) {
       await client.sendNotice(
         room,
         'This room is already bridged to a server.',

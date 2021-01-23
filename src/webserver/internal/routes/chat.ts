@@ -1,10 +1,67 @@
 import { LogService } from 'matrix-bot-sdk';
-import { Request, Response, Router } from 'express';
+import {
+  NextFunction,
+  Request,
+  Response,
+  Router,
+} from 'express';
 import Main from '../../../MainController';
 import Route from '../route';
 import {
   MCServerEvents as MCEvents,
 } from '../../../models/types';
+import Integrity from '../integrity';
+import { ServerErrors } from '../../../models/errors';
+
+/**
+ * Check the integrity of each request
+ */
+class ChatIntegrity extends Integrity {
+  /**
+   * Check the integrity of requests hitting POST /chat before they get
+   * processed
+   * @param {Request} req The request to check
+   * @param {Response} res Response object to use if there is an error
+   * @param {NextFunction} next Next callback function, called if everything is
+   * okay
+   */
+  public static submit(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): void {
+    // @ts-ignore
+    const reqID = req.id;
+    const { body } = req.body;
+
+    LogService.info(
+      'WebInterface',
+      `[Request ${reqID}]: Checking Chat Body Integrity`,
+    );
+
+    // Check message
+    const { message } = body;
+    if (message === undefined) {
+      super.fail(res, ServerErrors.noMessageError);
+    } else if (!(typeof message === 'string')) {
+      super.fail(res, ServerErrors.messageTypeError);
+    }
+
+    LogService.debug(
+      'WebInterface',
+      `[Request ${reqID}]: Message "${message}"`,
+    );
+
+    /**
+     * If the integrity passed this is what the body should look like:
+     * {
+     *   "message": "The body of the message",
+     *   "player" "player UUID or name"
+     * }
+     */
+    next();
+  }
+}
 
 export default class ChatRoute extends Route {
   constructor(main: Main) {
@@ -14,6 +71,7 @@ export default class ChatRoute extends Route {
 
   public getRouter(): Router {
     this.router.get('/', this.retrieve.bind(this));
+    this.router.post('/', ChatIntegrity.submit);
     this.router.post('/', this.submit.bind(this));
     return this.router;
   }

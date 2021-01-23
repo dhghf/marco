@@ -1,18 +1,101 @@
 import { LogService } from 'matrix-bot-sdk';
 import express, {
+  NextFunction,
   Router,
   Request,
   Response,
 } from 'express';
 import { Bridge } from '../../../bridging';
-import Main from '../../../MainController';
 import Route from '../route';
 import { MCServerEvents as MCEvents } from '../../../models/types';
+import Integrity from '../integrity';
+import { ServerErrors } from '../../../models/errors';
+import MainController from '../../../MainController';
+import { Server } from 'https';
+
+class PlayerIntegrity extends Integrity {
+  private readonly main: MainController;
+
+  constructor(main: MainController) {
+    super();
+    this.main = main;
+  }
+
+  public async all(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    const { body } = req;
+
+    const playerID = body.player;
+    if (playerID === undefined) {
+      Integrity.fail(res, ServerErrors.noPlayerError);
+      return;
+    }
+
+    if (!(typeof playerID === 'string')) {
+      Integrity.fail(res, ServerErrors.playerTypeError);
+      return;
+    }
+
+    try {
+      const player = await this.main.players.getPlayer(playerID);
+
+      // @ts-ignore
+      req.player = player;
+
+      next();
+    } catch (err) {
+      Integrity.fail(res, ServerErrors.noPlayerIdError);
+    }
+  }
+
+  public static kick(req: Request, res: Response, next: NextFunction): void {
+    // @ts-ignore
+    const reqID = req.id;
+    const { body } = req;
+
+    LogService.info(
+      'WebInterface',
+      `[Request ${reqID}]: Checking Kick Body Integrity`,
+    );
+
+    // Check reason
+    const { reason } = body;
+    if (reason === undefined) {
+      Integrity.fail(res, ServerErrors.noReasonError);
+      return;
+    }
+
+    if (!(typeof reason === 'string')) {
+      Integrity.fail(res, ServerErrors.reasonTypeError);
+      return;
+    }
+
+    LogService.debug(
+      'WebInterface',
+      `[Request ${reqID}]: Reason "${reason}"`,
+    );
+
+    /**
+     * If the integrity passed this is what the body should look like:
+     * {
+     *   "reason": "The reason for the kick",
+     *   "player" "player UUID or name"
+     * }
+     */
+    next();
+  }
+}
 
 export default class PlayerRoute extends Route {
-  constructor(main: Main) {
+  private readonly integrity: PlayerIntegrity;
+
+  constructor(main: MainController) {
     const router = Router();
     super(main, router);
+    this.integrity = new PlayerIntegrity(main);
   }
 
   public getRouter(): Router {
@@ -22,8 +105,10 @@ export default class PlayerRoute extends Route {
       next();
     });
 
+    this.router.use('/', this.integrity.all.bind(this.integrity));
     this.router.post('/join', this.join.bind(this));
     this.router.post('/quit', this.quit.bind(this));
+    this.router.post('/kick', PlayerIntegrity.kick);
     this.router.post('/kick', this.kick.bind(this));
 
     return this.router;
@@ -31,7 +116,7 @@ export default class PlayerRoute extends Route {
 
   /**
    * POST /player/join
-   * Polo will call this endpoint when a user joins the Minecraft server
+   * The plugin will call this endpoint when a user joins the Minecraft server
    * Example body:
    * {
    *   "player": <player identifier string>
