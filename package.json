@@ -1,6 +1,6 @@
 {
   "name": "matrix-appservice-minecraft",
-  "version": "0.9.7",
+  "version": "1.0.0",
   "description": "A relay bridge between multiple Minecraft servers and corresponding Matrix rooms.",
   "main": "index.js",
   "author": "Dylan Hackworth",
