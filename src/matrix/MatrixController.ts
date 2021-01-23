@@ -1,13 +1,13 @@
-import * as matrix from "matrix-bot-sdk";
-import { LogService } from "matrix-bot-sdk";
-import { RegManager } from "./internal/RegManager";
-import { Config } from "../Config";
-import type { Main } from "../Main";
-import { Bridge } from "../bridging";
-import { CmdManager } from "./internal/CmdManager";
-import { MsgProcessor } from "./internal/MsgProcessor";
-import type { MxEvents, MCEvents } from "../minecraft";
-
+import * as matrix from 'matrix-bot-sdk';
+import { LogService } from 'matrix-bot-sdk';
+import RegManager from './internal/RegManager';
+import { Config } from '../Config';
+import type Main from '../MainController';
+import { Bridge } from '../bridging';
+import CmdManager from './internal/CmdManager';
+import MsgProcessor from './internal/MsgProcessor';
+import type { MxEvents, MCServerEvents as MCEvents } from '../models/types';
+import { PlayerManager } from '../minecraft';
 
 export type MxMessage = {
   sender: string;
@@ -24,20 +24,23 @@ export type MxMessage = {
  * It also stores new room messages in the newMxMessages for the Minecraft
  * server to retrieve periodically.
  */
-export class MatrixInterface {
+export default class MatrixController {
   // Interfaces with Matrix
   public readonly appservice: matrix.Appservice;
+
   private readonly main: Main;
+
   // Collects new messages for Minecraft servers
-  private readonly newMxMessages: Map<string, MxEvents.Event[]>
+  private readonly newMxMessages: Map<string, MxEvents.PossibleEvents[]>
+
   // Handles commands given by Matrix users
   private readonly cmdManager: CmdManager;
+
   // Converts matrix messages into McMessages
   private readonly msgProcessor: MsgProcessor;
 
-
   constructor(config: Config, marco: Main) {
-    let registration = RegManager.getRegistration(config);
+    const registration = RegManager.getRegistration(config);
 
     this.main = marco;
     this.msgProcessor = new MsgProcessor(this);
@@ -46,7 +49,7 @@ export class MatrixInterface {
       bindAddress: config.appservice.bindAddress,
       homeserverName: config.appservice.homeserverName,
       homeserverUrl: config.appservice.homeserverURL,
-      port: config.appservice.port
+      port: config.appservice.port,
     });
     this.cmdManager = new CmdManager(this.appservice, this.main, config);
     this.newMxMessages = new Map();
@@ -74,7 +77,10 @@ export class MatrixInterface {
    * @param {MCEvents.Message} mcMessage
    * @returns {Promise<void>}
    */
-  public async sendMessage(bridge: Bridge, mcMessage: MCEvents.Message): Promise<void> {
+  public async sendMessage(
+    bridge: Bridge,
+    mcMessage: MCEvents.MessageEvent,
+  ): Promise<void> {
     // The player UUID is the Matrix appservice user's Matrix ID
     const uuid = await mcMessage.player.getUUID();
     // This is the representing Matrix user
@@ -83,26 +89,26 @@ export class MatrixInterface {
     try {
       await intent.ensureRegistered();
       // Keep the player name, skin in sync with their profile data on Matrix
-      await this.main.players.sync(intent, mcMessage.player);
+      await PlayerManager.sync(intent, mcMessage.player);
 
       // Finally send the message to the room, half of these steps are
       // skipped to this if everything has already been completed before
       // (such as inviting, joining, and syncing unless the player updated a
       // certain detail that we keep synced)
     } catch (err) {
-      let errMessage = 'An error occurred while sending a message to a bridged room.\n'
+      let errMessage = 'An error occurred while sending a message to a bridged room.\n';
       if (err instanceof Error) {
         errMessage += ` - message: ${err.message}\n`;
         errMessage += ` - stack:\n${err.stack}`;
       } else {
-        errMessage += ' - error: ' + err;
+        errMessage += ` - error: ${err}`;
       }
       LogService.error('marco-matrix', errMessage);
     } finally {
       // what matters most is that the message gets to the room.
       await intent.sendText(
         bridge.room,
-        mcMessage.message
+        mcMessage.message,
       );
     }
   }
@@ -114,7 +120,10 @@ export class MatrixInterface {
    * @param {MCEvents.Join} mcJoin
    * @returns {Promise<void>}
    */
-  public async sendJoin(bridge: Bridge, mcJoin: MCEvents.Join): Promise<void> {
+  public async sendJoin(
+    bridge: Bridge,
+    mcJoin: MCEvents.JoinEvent,
+  ): Promise<void> {
     // The player UUID is the Matrix appservice user's Matrix ID
     const uuid = await mcJoin.player.getUUID();
     // This is the representing Matrix user
@@ -123,25 +132,25 @@ export class MatrixInterface {
     try {
       await intent.ensureRegistered();
       // Keep the player name, skin in sync with their profile data on Matrix
-      await this.main.players.sync(intent, mcJoin.player);
+      await PlayerManager.sync(intent, mcJoin.player);
 
       // Finally send the message to the room, half of these steps are
       // skipped to this if everything has already been completed before
       // (such as inviting, joining, and syncing unless the player updated a
       // certain detail that we keep synced)
     } catch (err) {
-      let errMessage = 'An error occurred while joining a bridged room.\n'
+      let errMessage = 'An error occurred while joining a bridged room.\n';
       if (err instanceof Error) {
         errMessage += ` - message: ${err.message}\n`;
         errMessage += ` - stack:\n${err.stack}`;
       } else {
-        errMessage += ' - error: ' + err;
+        errMessage += ` - error: ${err}`;
       }
       LogService.error('marco-matrix', errMessage);
     } finally {
       // what matters most is that the room is joined.
       await intent.joinRoom(
-        bridge.room
+        bridge.room,
       );
     }
   }
@@ -153,7 +162,10 @@ export class MatrixInterface {
    * @param {MCEvents.Quit} mcQuit
    * @returns {Promise<void>}
    */
-  public async sendQuit(bridge: Bridge, mcQuit: MCEvents.Quit): Promise<void> {
+  public async sendQuit(
+    bridge: Bridge,
+    mcQuit: MCEvents.QuitEvent,
+  ): Promise<void> {
     // The player UUID is the Matrix appservice user's Matrix ID
     const uuid = await mcQuit.player.getUUID();
     // This is the representing Matrix user
@@ -168,18 +180,18 @@ export class MatrixInterface {
       // skipped to this if everything has already been completed before
       // (such as inviting & joining)
     } catch (err) {
-      let errMessage = 'An error occurred while leaving a bridged room.\n'
+      let errMessage = 'An error occurred while leaving a bridged room.\n';
       if (err instanceof Error) {
         errMessage += ` - message: ${err.message}\n`;
         errMessage += ` - stack:\n${err.stack}`;
       } else {
-        errMessage += ' - error: ' + err;
+        errMessage += ` - error: ${err}`;
       }
       LogService.error('marco-matrix', errMessage);
     } finally {
       // what matters most is that the room is left.
       await intent.leaveRoom(
-        bridge.room
+        bridge.room,
       );
     }
   }
@@ -191,14 +203,21 @@ export class MatrixInterface {
    * @param {MCEvents.Kick} mcKick
    * @returns {Promise<void>}
    */
-  public async sendKick(bridge: Bridge, mcKick: MCEvents.Kick): Promise<void> {
+  public async sendKick(
+    bridge: Bridge,
+    mcKick: MCEvents.KickEvent,
+  ): Promise<void> {
     // The player UUID is the Matrix appservice user's Matrix ID
     const uuid = await mcKick.player.getUUID();
     // This is the representing Matrix bot user
     const client = this.appservice.botClient;
 
     // Perform the kick
-    client.kickUser(this.appservice.getUserIdForSuffix(uuid), bridge.room, mcKick.reason);
+    client.kickUser(
+      this.appservice.getUserIdForSuffix(uuid),
+      bridge.room,
+      mcKick.reason,
+    );
   }
 
   /**
@@ -207,7 +226,7 @@ export class MatrixInterface {
    * @param {Bridge} bridge
    * @returns {MxEvents.Event[]}
    */
-  public getNewMxMessages(bridge: Bridge): MxEvents.Event[] {
+  public getNewMxMessages(bridge: Bridge): MxEvents.PossibleEvents[] {
     let newMxMessages = this.newMxMessages.get(bridge.room);
 
     if (!newMxMessages) {
@@ -225,8 +244,7 @@ export class MatrixInterface {
   public addNewMxMessage(message: MxMessage) {
     const newMxMessages = this.newMxMessages.get(message.room) || [];
 
-    if (!this.appservice.isNamespacedUser(message.sender))
-      newMxMessages.push(message.event);
+    if (!this.appservice.isNamespacedUser(message.sender)) newMxMessages.push(message.event);
 
     this.newMxMessages.set(message.room, newMxMessages);
   }
@@ -241,7 +259,7 @@ export class MatrixInterface {
     return this.appservice.botClient.getRoomStateEvent(
       room,
       'm.room.member',
-      user
+      user,
     );
   }
 
@@ -264,34 +282,36 @@ export class MatrixInterface {
    */
   private async onMxMessage(room: string, event: any): Promise<void> {
     // Check if the event hasn't already been redacted
-    const content: any | undefined = event['content'];
-    if (!content || !content['body'])
+    const { content } = event;
+    if (!content || !content.body) {
       return;
-    const body = content['body'];
-    const msgtype: string = content['msgtype'];
+    }
+    const { body } = content;
+    const { msgtype } = content;
     const isBridged = this.main.bridges.isRoomBridged(room);
 
     // Handle command-related messages
-    if (msgtype == 'm.text' && body.startsWith(CmdManager.prefix)) {
-      await this.cmdManager.onMxMessage(room, event['sender'], content['body']);
+    if (msgtype === 'm.text' && body.startsWith(CmdManager.prefix)) {
+      await this.cmdManager.onMxMessage(room, event.sender, content.body);
       return;
     }
 
     // If it isn't a command then check if the m.room.message was sent in a
     // bridged room
-    if (!isBridged)
+    if (!isBridged) {
       return;
+    }
 
     // Handle m.text message
-    if (msgtype == 'm.text') {
-      let message = await this.msgProcessor.buildTextMsg(room, event);
+    if (msgtype === 'm.text') {
+      const message = await this.msgProcessor.buildTextMsg(room, event);
 
       // Give it to Main to handle
       this.main.sendToMinecraft(message);
 
       // Handle m.emote message
-    } else if (msgtype == 'm.emote') {
-      let message = await this.msgProcessor.buildEmoteMsg(room, event);
+    } else if (msgtype === 'm.emote') {
+      const message = await this.msgProcessor.buildEmoteMsg(room, event);
 
       // Give it to Main to handle
       this.main.sendToMinecraft(message);
@@ -309,32 +329,29 @@ export class MatrixInterface {
   private async onMxLeave(room: string, event: any): Promise<void> {
     // Check if the m.room.member state event was sent in a bridged room
     const isBridged = this.main.bridges.isRoomBridged(room);
-    if (!isBridged)
-      return;
+    if (!isBridged) return;
 
     // Check it relates to one of our Minecraft users
-    const stateKey: string = event['state_key'];
-    if (!this.appservice.isNamespacedUser(stateKey))
-      return;
+    const stateKey: string = event.state_key;
+    if (!this.appservice.isNamespacedUser(stateKey)) return;
 
-    const content: any | undefined = event['content'];
-    const oldContent: any | undefined = event['prev_content'] || {};
-    const membership: string = content['membership'];
-    const oldMembership: string = oldContent['membership'] || "leave";
-    const sender: string = event['sender'];
+    const { content } = event;
+    const oldContent: any | undefined = event.prev_content || {};
+    const { membership } = content;
+    const oldMembership: string = oldContent.membership || 'leave';
 
-    if (membership == 'ban') {
-      let message = await this.msgProcessor.buildBanMsg(room, event);
+    if (membership === 'ban') {
+      const message = await this.msgProcessor.buildBanMsg(room, event);
 
       // Give it to Main to handle
       this.main.sendToMinecraft(message);
-    } else if (oldMembership == 'ban') {
-      let message = await this.msgProcessor.buildUnbanMsg(room, event);
+    } else if (oldMembership === 'ban') {
+      const message = await this.msgProcessor.buildUnbanMsg(room, event);
 
       // Give it to Main to handle
       this.main.sendToMinecraft(message);
-    } else if (membership == 'leave' && oldMembership == 'join') {
-      let message = await this.msgProcessor.buildKickMsg(room, event);
+    } else if (membership === 'leave' && oldMembership === 'join') {
+      const message = await this.msgProcessor.buildKickMsg(room, event);
 
       // Give it to Main to handle
       this.main.sendToMinecraft(message);
@@ -347,7 +364,12 @@ export class MatrixInterface {
    * @param {string} user User Matrix ID
    * @param {createUser} Function Callback to create the new user
    */
-  private async onQueryUser(user: string, createUser: Function): Promise<void> {
+  // eslint-disable-next-line class-methods-use-this
+  private async onQueryUser(
+    _user: string,
+    // eslint-disable-next-line no-unused-vars
+    createUser: (x: boolean) => void,
+  ): Promise<void> {
     // Refuse to automatically create arbitrary new users for now
     createUser(false);
   }

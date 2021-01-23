@@ -21,32 +21,25 @@
  * NOTE: They should all utilize TLS if it's offered
  * @const servers
  */
-const servers = {
-  api: "https://api.mojang.com",
-  sessions: "https://sessionserver.mojang.com"
-}
-
-/**
- * All the GET endpoints
- * @const get
- */
-export const get = {
-  /**
-   * Playername -> UUID
-   * @link https://wiki.vg/Mojang_API#Username_-.3E_UUID_at_time
-   */
-  uuid: `${servers.api}/users/profiles/minecraft/{playername}`,
-
-  /**
-   * UUID -> Name history
-   * @link https://wiki.vg/Mojang_API#UUID_-.3E_Name_history
-   */
-  nameHistory: `${servers.api}/user/profiles/{uuid}/names`,
-
-  /**
-   * UUID -> Profile + Skin/Cape
-   * @link https://wiki.vg/Mojang_API#UUID_-.3E_Profile_.2B_Skin.2FCape
-   */
-  profile: `${servers.sessions}/session/minecraft/profile/{uuid}`
+export const SERVERS = {
+  api: 'https://api.mojang.com',
+  sessions: 'https://sessionserver.mojang.com',
 };
 
+/**
+ * Playername -> UUID
+ * @link https://wiki.vg/Mojang_API#Username_-.3E_UUID_at_time
+ */
+export const UUID = `${SERVERS.api}/users/profiles/minecraft/{playername}`;
+
+/**
+ * UUID -> Name history
+ * @link https://wiki.vg/Mojang_API#UUID_-.3E_Name_history
+ */
+export const NAME_HISTORY = `${SERVERS.api}/user/profiles/{uuid}/names`;
+
+/**
+ * UUID -> Profile + Skin/Cape
+ * @link https://wiki.vg/Mojang_API#UUID_-.3E_Profile_.2B_Skin.2FCape
+ */
+export const PROFILE = `${SERVERS.sessions}/session/minecraft/profile/{uuid}`;

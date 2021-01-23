@@ -8,8 +8,9 @@
  * }
  * @property {string} room The room bridged
  */
-export class Bridge {
+export default class Bridge {
   public readonly id: string;
+
   public readonly room: string;
 
   constructor(id: string, room: string) {

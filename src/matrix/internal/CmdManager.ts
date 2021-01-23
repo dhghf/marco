@@ -1,30 +1,34 @@
-import { Appservice } from "matrix-bot-sdk";
-import { Main } from "../../Main";
-import { BridgeError } from "../../bridging";
-import { Config } from "../../Config";
-import { MxEvents } from "../../minecraft";
-
+import { Appservice } from 'matrix-bot-sdk';
+import Main from '../../MainController';
+import { BridgedAlreadyError } from '../../models/errors';
+import { Config } from '../../Config';
+import {
+  MxEvents as MXEvents,
+} from '../../models/types';
 
 /**
  * This class handles all the commands on the Matrix side a user can use
  * "!minecraft" to interact with the bot and establish a bridge.
  */
-export class CmdManager {
-  public static readonly prefix = "!minecraft";
-  private static readonly help =
-    "Command List:\n" +
-    // see <CmdBridge>.handleBridge method
-    " - bridge <room ID>: This will provide an access token to give a" +
-    " Minecraft server to send and retrieve messages in the room with.\n" +
-    // see <CmdBridge>.handleUnbridge method
-    " - unbridge [<room ID>]: This will forcefully invalidate any tokens" +
-    " corresponding with this room\n" +
-    ' - announce <...announcement>: This will send an announcement as' +
-    ' "Server". Send this command in a bridged room.'
-  private readonly appservice: Appservice;
-  private readonly main: Main;
-  private readonly config: Config;
+export default class CmdManager {
+  public static readonly prefix = '!minecraft';
 
+  private static readonly help =
+    'Command List:\n'
+    // see <CmdBridge>.handleBridge method
+    + ' - bridge <room ID>: This will provide an access token to give a'
+    + ' Minecraft server to send and retrieve messages in the room with.\n'
+    // see <CmdBridge>.handleUnbridge method
+    + ' - unbridge [<room ID>]: This will forcefully invalidate any tokens'
+    + ' corresponding with this room\n'
+    + ' - announce <...announcement>: This will send an announcement as'
+    + ' "Server". Send this command in a bridged room.'
+
+  private readonly appservice: Appservice;
+
+  private readonly main: Main;
+
+  private readonly config: Config;
 
   constructor(appservice: Appservice, main: Main, config: Config) {
     this.appservice = appservice;
@@ -42,6 +46,9 @@ export class CmdManager {
     // args = ["!minecraft", "bridge" || "unbridge" || undefined]
     const args = body.split(' ');
     const client = this.appservice.botClient;
+    const announcement = body.substr(
+      CmdManager.prefix.length + ' announce'.length,
+    );
 
     switch (args[1]) {
       case 'bridge':
@@ -51,9 +58,6 @@ export class CmdManager {
         await this.unbridge(room, sender, args);
         break;
       case 'announce':
-        const announcement = body.substr(
-          CmdManager.prefix.length + " announce".length
-        );
         await this.announce(room, sender, announcement);
         break;
       default:
@@ -67,9 +71,9 @@ export class CmdManager {
    * @returns {boolean} true if whitelisted or whitelist disabled
    */
   private checkWhitelist(user: string): boolean {
-    return !this.config.appservice.userWhitelist ||
-           this.config.appservice.userWhitelist.length == 0 ||
-           this.config.appservice.userWhitelist.includes(user);
+    return !this.config.appservice.userWhitelist
+           || this.config.appservice.userWhitelist.length === 0
+           || this.config.appservice.userWhitelist.includes(user);
   }
 
   /**
@@ -84,10 +88,10 @@ export class CmdManager {
     const powerLevels = await client.getRoomStateEvent(
       target,
       'm.room.power_levels',
-      ''
+      '',
     );
-    const stateEventPower: number = powerLevels['state_default'] || 50;
-    const senderPower: number = powerLevels['users'][user] || 0;
+    const stateEventPower: number = powerLevels.state_default || 50;
+    const senderPower: number = powerLevels.users[user] || 0;
     const hasPerms = (senderPower >= stateEventPower);
 
     if (!hasPerms) {
@@ -108,36 +112,36 @@ export class CmdManager {
   private async bridgeError(room: string, err: any) {
     const client = this.appservice.botClient;
 
-    if (err instanceof BridgeError.BridgedAlreadyError) {
+    if (err instanceof BridgedAlreadyError) {
       await client.sendNotice(
         room,
-        "This room is already bridged to a server.",
+        'This room is already bridged to a server.',
       );
     } else if (err instanceof Error) {
-      if (err.message == 'Invalid room ID or alias') {
+      if (err.message === 'Invalid room ID or alias') {
         await client.sendNotice(
           room,
-          CmdManager.help
+          CmdManager.help,
         );
       } else {
         await client.sendNotice(
           room,
-          "Something went wrong: " + err.message
+          `Something went wrong: ${err.message}`,
         );
       }
-    } else if (err instanceof Object &&
-               err.body instanceof Object &&
-               typeof err.body.error === 'string') {
+    } else if (err instanceof Object
+               && err.body instanceof Object
+               && typeof err.body.error === 'string') {
       // The error string from the Matrix server may be in there containing
       // useful feedback
       await client.sendNotice(
         room,
-        'Something went wrong: ' + err.body.error
+        `Something went wrong: ${err.body.error}`,
       );
     } else {
       await client.sendNotice(
         room,
-        'Something went wrong'
+        'Something went wrong',
       );
     }
   }
@@ -160,23 +164,22 @@ export class CmdManager {
 
     if (isBridged) {
       this.main.sendToMinecraft({
-        room: room,
+        room,
         sender,
         body: `[Server] ${body}`,
-        event: <MxEvents.AnnounceMessageEvent> {
+        event: <MXEvents.AnnounceMessageEvent> {
           sender: {
             mxid: sender,
-            displayName: sender
+            displayName: sender,
           },
-          type: "message.announce",
-          body: body,
-        } as MxEvents.Event
+          type: 'message.announce',
+          body,
+        } as MXEvents.Event,
       });
-      await client.sendNotice(room, "Sent!");
+      await client.sendNotice(room, 'Sent!');
     } else {
-      await client.sendNotice(room, "This room isn't bridged.")
+      await client.sendNotice(room, "This room isn't bridged.");
     }
-
   }
 
   /**
@@ -191,7 +194,7 @@ export class CmdManager {
 
     if (!this.checkWhitelist(sender)) {
       await client.sendNotice(room,
-        "You are not whitelisted in the bridge config");
+        'You are not whitelisted in the bridge config');
       return;
     }
 
@@ -209,8 +212,8 @@ export class CmdManager {
       if (joinedRoomIds.indexOf(target) === -1) {
         const userId = await client.getUserId();
         await client.sendNotice(room,
-          'Bridge bot is not in that room. ' +
-          `Please invite ${userId} to the room and try again.`);
+          'Bridge bot is not in that room. '
+          + `Please invite ${userId} to the room and try again.`);
         return;
       }
 
@@ -220,8 +223,8 @@ export class CmdManager {
         const bridge = this.main.bridges.bridge(target);
         await client.sendNotice(
           room,
-          'Bridged! Go-to the Minecraft server and execute' +
-          `"/bridge <token>"\n${bridge.id}`
+          'Bridged! Go-to the Minecraft server and execute'
+          + `"/bridge <token>"\n${bridge.id}`,
         );
       }
     } catch (err) {
@@ -250,10 +253,8 @@ export class CmdManager {
       if (hasPerms) {
         const unbridged = this.main.bridges.unbridge(target);
 
-        if (unbridged)
-          await client.sendNotice(room, "Room has been unbridged.");
-        else
-          await client.sendNotice(room, "The room was never bridged.");
+        if (unbridged) await client.sendNotice(room, 'Room has been unbridged.');
+        else await client.sendNotice(room, 'The room was never bridged.');
       }
     } catch (err) {
       await this.bridgeError(room, err);

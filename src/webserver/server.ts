@@ -1,17 +1,18 @@
-import type { NextFunction, Request, Response, Router } from "express";
-import type { Config } from "../Config";
-import type { Main } from "../Main";
-import { BridgeError } from "../bridging";
-import { chatRouter } from "./internal/routes";
-import { playerRouter } from "./internal/routes";
-import { getEvents } from "./internal/getEvents";
-import { LogService } from "matrix-bot-sdk";
-import { v1 as uuid } from "uuid";
-import * as Errors from "./internal/errors";
+import type {
+  NextFunction, Request, Response, Router,
+} from 'express';
+import { LogService } from 'matrix-bot-sdk';
+import { v1 as uuid } from 'uuid';
+import type { Config } from '../Config';
+import type Main from '../MainController';
+import { NotBridgedError } from '../models/errors';
+import * as Errors from './internal/errors';
+import ChatRoute from './internal/routes/chat';
+import PlayerRoute from './internal/routes/player';
 
-
-export class WebInterface {
+export default class WebServer {
   private readonly main: Main
+
   private readonly config: Config;
 
   public constructor(config: Config, main: Main) {
@@ -24,6 +25,8 @@ export class WebInterface {
    * @param {Router} app Router to extend off of
    */
   public start(app: Router) {
+    const chatRoute = new ChatRoute(this.main);
+    const playerRoute = new PlayerRoute(this.main);
     // Vibe check for checking client to server integrity, if it passes the
     // checkAuth method then everything is good
     app.get('/vibecheck', this.vibeCheck.bind(this));
@@ -34,13 +37,10 @@ export class WebInterface {
     app.use('/player', this.checkAuth.bind(this));
 
     // Chat endpoint for getting messages and posting minecraft chat messages
-    app.use('/chat', chatRouter);
-
-    // Events endpoint for getting messages and events from Matrix
-    app.get('/events', getEvents);
+    app.use('/chat', chatRoute.getRouter());
 
     // Player endpoint for posting minecraft player events
-    app.use('/player', playerRouter);
+    app.use('/player', playerRoute.getRouter());
   }
 
   /**
@@ -54,10 +54,10 @@ export class WebInterface {
     const auth = req.header('Authorization');
     const id = uuid();
 
-    LogService.info("WebInterface", `[Request ${id}]`);
+    LogService.info('WebInterface', `[Request ${id}]`);
     LogService.info(
-      "WebInterface",
-      `[Request ${id}]: Endpoint ${req.method} ${req.path}`
+      'WebInterface',
+      `[Request ${id}]: Endpoint ${req.method} ${req.path}`,
     );
 
     try {
@@ -82,35 +82,34 @@ export class WebInterface {
 
       const bridge = this.main.bridges.getBridge(token);
 
-      LogService.info("WebInterface", `[Request ${id}]: Authorized`);
+      LogService.info('WebInterface', `[Request ${id}]: Authorized`);
 
       res.status(200);
       res.send({
-        "status": "OK",
-        "bridge": bridge.room
+        status: 'OK',
+        bridge: bridge.room,
       });
       res.end();
-
     } catch (err) {
-      if (err instanceof BridgeError.NotBridgedError) {
+      if (err instanceof NotBridgedError) {
         LogService.warn(
-          "WebInterface",
-          `[Request ${id}]: Unauthorized`
+          'WebInterface',
+          `[Request ${id}]: Unauthorized`,
         );
         res.status(401);
         res.send(Errors.invalidTokenError);
         res.end();
       } else {
         LogService.error(
-          "marco:WebServer",
-          err
+          'marco:WebServer',
+          err,
         );
         res.status(500);
         res.send(Errors.serverError);
       }
     }
 
-    LogService.info("WebInterface", `[Request ${id}]: Finished`);
+    LogService.info('WebInterface', `[Request ${id}]: Finished`);
   }
 
   /**
@@ -124,16 +123,16 @@ export class WebInterface {
     // logging purposes)
     const id = uuid();
 
-    LogService.info("WebInterface", `[Request ${id}]`);
+    LogService.info('WebInterface', `[Request ${id}]`);
     LogService.info(
-      "WebInterface",
-      `[Request ${id}]: Endpoint ${req.method} ${req.path}`
+      'WebInterface',
+      `[Request ${id}]: Endpoint ${req.method} ${req.path}`,
     );
 
     const auth = req.header('Authorization');
 
     // Let's see if they actually provided an authorization header
-    if (auth == undefined) {
+    if (auth === undefined) {
       res.status(401);
       res.end();
       return;
@@ -158,20 +157,20 @@ export class WebInterface {
       const bridge = this.main.bridges.getBridge(token);
 
       LogService.info(
-        "WebInterface",
-        `[Request ${id}]: Authorized`
+        'WebInterface',
+        `[Request ${id}]: Authorized`,
       );
 
       // @ts-ignore
-      req['main'] = this.main;
+      req.main = this.main;
       // @ts-ignore
-      req['bridge'] = bridge;
+      req.bridge = bridge;
       // @ts-ignore
-      req['id'] = id;
+      req.id = id;
 
       next();
     } catch (err) {
-      if (err instanceof BridgeError.NotBridgedError) {
+      if (err instanceof NotBridgedError) {
         res.status(401);
         res.send(Errors.invalidTokenError);
         res.end();
@@ -183,4 +182,3 @@ export class WebInterface {
     }
   }
 }
-

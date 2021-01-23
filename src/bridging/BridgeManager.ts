@@ -1,10 +1,9 @@
-import { Bridge } from "./Bridge";
-import { BridgedAlreadyError, NotBridgedError } from "./errors";
 import * as jose from 'jose';
 import { v1 as uuid } from 'uuid';
-import { Config } from "../Config";
-import { BridgeTable, DBController } from "../db";
-
+import Bridge from './Bridge';
+import { BridgedAlreadyError } from '../models/errors';
+import { Config } from '../Config';
+import { BridgeTable, DBController } from '../db';
 
 /**
  * The BridgeManager validates bridging between a Minecraft server and
@@ -12,8 +11,9 @@ import { BridgeTable, DBController } from "../db";
  * BridgeManager before interacting with a room or Minecraft server to make
  * sure the interactions are valid.
  */
-export class BridgeManager {
+export default class BridgeManager {
   private readonly db: BridgeTable;
+
   private readonly config: Config;
 
   constructor(config: Config, db: DBController) {
@@ -61,13 +61,12 @@ export class BridgeManager {
     if (!isBridged) {
       const id = jose.JWT.sign(
         { room, id: uuid() },
-        this.config.webserver.privKey
+        this.config.webserver.privKey,
       );
       this.db.setBridge(id, room);
       return new Bridge(id, room);
-    } else {
-      throw new BridgedAlreadyError();
     }
+    throw new BridgedAlreadyError();
   }
 
   /**

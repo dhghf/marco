@@ -1,12 +1,12 @@
-import { Bridge, BridgeError } from "../../bridging/";
-import { Database } from "better-sqlite3";
-import { LogService } from "matrix-bot-sdk";
-
+import { Database } from 'better-sqlite3';
+import { LogService } from 'matrix-bot-sdk';
+import { Bridge } from '../../bridging';
+import { NotBridgedError } from '../../models/errors';
 
 /**
  * This manages the bridge table in marco.db.
  */
-export class BridgeTable {
+export default class BridgeTable {
   private readonly db: Database
 
   constructor(db: Database) {
@@ -22,7 +22,7 @@ export class BridgeTable {
    */
   public setBridge(id: string, room: string): boolean {
     const info = this.db.prepare(
-      'INSERT INTO bridging (id, room) VALUES (?,?)'
+      'INSERT INTO bridging (id, room) VALUES (?,?)',
     ).run(id, room);
 
     return (info.changes > 0);
@@ -37,15 +37,14 @@ export class BridgeTable {
    */
   public getBridge(id: string): Bridge {
     const row = this.db.prepare(
-      'SELECT room FROM bridging WHERE id=?'
+      'SELECT room FROM bridging WHERE id=?',
     ).get(id);
     const roomID: string | undefined = row?.room;
 
     if (roomID) {
       return new Bridge(id, roomID);
-    } else {
-      throw new BridgeError.NotBridgedError();
     }
+    throw new NotBridgedError();
   }
 
   /**
@@ -55,7 +54,7 @@ export class BridgeTable {
    */
   public unBridge(room: string): boolean {
     const info = this.db.prepare(
-      'DELETE FROM bridging WHERE room=?'
+      'DELETE FROM bridging WHERE room=?',
     ).run(room);
 
     return (info.changes > 0);
@@ -68,10 +67,10 @@ export class BridgeTable {
    */
   public isRoomBridged(room: string): boolean {
     const row = this.db.prepare(
-      'SELECT id FROM bridging WHERE room=?'
+      'SELECT id FROM bridging WHERE room=?',
     ).get(room);
 
-    return (row != undefined);
+    return (row !== undefined);
   }
 
   /**
@@ -81,10 +80,10 @@ export class BridgeTable {
    */
   public isBridged(id: string): boolean {
     const row = this.db.prepare(
-      'SELECT id FROM bridging WHERE id=?'
+      'SELECT id FROM bridging WHERE id=?',
     ).get(id);
 
-    return (row != undefined);
+    return (row !== undefined);
   }
 
   /**
@@ -93,13 +92,13 @@ export class BridgeTable {
   private setupBridgeTable() {
     LogService.info(
       'marco-db: bridging',
-      'Setting up bridge table'
+      'Setting up bridge table',
     );
     this.db.prepare(
-      'CREATE TABLE IF NOT EXISTS bridging (' +
-      'id text primary key NOT NULL,' +
-      'room text NOT NULL' +
-      ')'
+      'CREATE TABLE IF NOT EXISTS bridging ('
+      + 'id text primary key NOT NULL,'
+      + 'room text NOT NULL'
+      + ')',
     ).run();
   }
 }

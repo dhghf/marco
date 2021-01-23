@@ -1,3 +1,3 @@
-export { PlayerManager } from "./PlayerManager";
-export * from "./internal/types";
-export type { Player } from "./internal/Player"
+export { default as PlayerManager } from './PlayerManager';
+export * from './internal/types';
+export { default as Player } from './internal/Player';

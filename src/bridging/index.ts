@@ -1,3 +1,2 @@
-export { Bridge } from './Bridge';
-export { BridgeManager } from './BridgeManager';
-export * as BridgeError from './errors';
+export { default as Bridge } from './Bridge';
+export { default as BridgeManager } from './BridgeManager';

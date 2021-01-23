@@ -7,8 +7,8 @@
  * @const serverError
  */
 export const serverError = {
-  "error": "SERVER_ERROR",
-  "message": "The server messed up"
+  error: 'SERVER_ERROR',
+  message: 'The server messed up',
 };
 
 /**
@@ -16,8 +16,8 @@ export const serverError = {
  * @const invalidTokenError
  */
 export const invalidTokenError = {
-  "error": "INVALID_TOKEN",
-  "message": "The token provided is not bridged with anything"
+  error: 'INVALID_TOKEN',
+  message: 'The token provided is not bridged with anything',
 };
 
 /**
@@ -25,8 +25,8 @@ export const invalidTokenError = {
  * @const noTokenError
  */
 export const noTokenError = {
-  "error": "NO_TOKEN",
-  "message": "A token was not provided"
+  error: 'NO_TOKEN',
+  message: 'A token was not provided',
 };
 
 /**
@@ -34,8 +34,8 @@ export const noTokenError = {
  * @const noBodyError
  */
 export const noBodyError = {
-  "error": "NO_BODY",
-  "message": "Provide a body with valid JSON"
+  error: 'NO_BODY',
+  message: 'Provide a body with valid JSON',
 };
 
 /**
@@ -43,8 +43,8 @@ export const noBodyError = {
  * @const noMessageError
  */
 export const noMessageError = {
-  "error": "NO_MESSAGE",
-  "message": "Provide a message property"
+  error: 'NO_MESSAGE',
+  message: 'Provide a message property',
 };
 
 /**
@@ -52,8 +52,8 @@ export const noMessageError = {
  * @const noReasonError
  */
 export const noReasonError = {
-  "error": "NO_REASON",
-  "message": "Provide a reason property"
+  error: 'NO_REASON',
+  message: 'Provide a reason property',
 };
 
 /**
@@ -61,8 +61,8 @@ export const noReasonError = {
  * @const messageTypeError
  */
 export const messageTypeError = {
-  "error": "MESSAGE_TYPE",
-  "message": "The message property must be type of string"
+  error: 'MESSAGE_TYPE',
+  message: 'The message property must be type of string',
 };
 
 /**
@@ -70,8 +70,8 @@ export const messageTypeError = {
  * @const reasonTypeError
  */
 export const reasonTypeError = {
-  "error": "REASON_TYPE",
-  "message": "The reason property must be type of string"
+  error: 'REASON_TYPE',
+  message: 'The reason property must be type of string',
 };
 
 /**
@@ -79,9 +79,9 @@ export const reasonTypeError = {
  * @const playerTypeError
  */
 export const playerTypeError = {
-  "error": "PLAYER_TYPE",
-  "message": "The player property must be type of object with a name and" +
-    " uuid property"
+  error: 'PLAYER_TYPE',
+  message: 'The player property must be type of object with a name and'
+    + ' uuid property',
 };
 
 /**
@@ -89,8 +89,8 @@ export const playerTypeError = {
  * @const noPlayerError
  */
 export const noPlayerError = {
-  "error": "NO_PLAYER",
-  "message": "Provide player property"
+  error: 'NO_PLAYER',
+  message: 'Provide player property',
 };
 
 /**
@@ -98,8 +98,8 @@ export const noPlayerError = {
  * @const noPlayerNameError
  */
 export const noPlayerNameError = {
-  "error": "NO_PLAYER_NAME",
-  "message": "Provide player name property in player object"
+  error: 'NO_PLAYER_NAME',
+  message: 'Provide player name property in player object',
 };
 
 /**
@@ -107,18 +107,17 @@ export const noPlayerNameError = {
  * @const playerNameTypeError
  */
 export const playerNameTypeError = {
-  "error": "PLAYER_NAME_TYPE",
-  "message": "Name property of player object must be type of string"
+  error: 'PLAYER_NAME_TYPE',
+  message: 'Name property of player object must be type of string',
 };
-
 
 /**
  * Polo didn't provide a player UUID
  * @const noPlayerIdError
  */
 export const noPlayerIdError = {
-  "error": "NO_PLAYER_UUID",
-  "message": "Provide player UUID property in player object"
+  error: 'NO_PLAYER_UUID',
+  message: 'Provide player UUID property in player object',
 };
 
 /**
@@ -126,6 +125,6 @@ export const noPlayerIdError = {
  * @const playerIdTypeError
  */
 export const playerIdTypeError = {
-  "error": "PLAYER_UUID_TYPE",
-  "message": "UUID property of player object must be type of string"
-}
+  error: 'PLAYER_UUID_TYPE',
+  message: 'UUID property of player object must be type of string',
+};

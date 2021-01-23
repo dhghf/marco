@@ -1,16 +1,16 @@
 import got from 'got';
-import sharp from "sharp";
+import sharp from 'sharp';
 import { Responses, Skin, Texture } from './types';
-import * as Endpoints from "./endpoints";
-
+import * as endpoints from './endpoints';
 
 /**
  * This class represents a player in Minecraft. It interacts with the
  * Mojang API (credit to wiki.vg for mapping out all the endpoints) to get
  * all the attributes in all the accessor methods.
  */
-export class Player {
+export default class Player {
   private name: string | null;
+
   private uuid: string | null;
 
   public constructor(name?: string, uuid?: string) {
@@ -25,7 +25,7 @@ export class Player {
    * @returns {Skin}
    */
   public static parseTexture(texture: Texture): Skin {
-    let decoded = Buffer.from(texture.value, 'base64')
+    const decoded = Buffer.from(texture.value, 'base64')
       .toString('utf-8');
     return JSON.parse(decoded);
   }
@@ -38,17 +38,15 @@ export class Player {
    * @returns {Promise<string>}
    */
   public async getUUID(): Promise<string> {
-    if (this.uuid != null)
-      return this.uuid;
-    else {
-      const name = await this.getName();
-      const target = Endpoints.get.uuid.replace(/({playername})/g, name);
-      const res = await got(target);
-      const body = JSON.parse(res.body) as Responses.UUID;
+    if (this.uuid != null) return this.uuid;
 
-      this.uuid = body.id;
-      return body.id;
-    }
+    const name = await this.getName();
+    const target = endpoints.UUID.replace(/({playername})/g, name);
+    const res = await got(target);
+    const body = JSON.parse(res.body) as Responses.UUID;
+
+    this.uuid = body.id;
+    return body.id;
   }
 
   /**
@@ -56,15 +54,13 @@ export class Player {
    * @returns {Promise<string>}
    */
   public async getName(): Promise<string> {
-    if (this.name != null)
-      return this.name;
-    else {
-      const profile = await this.getProfile();
+    if (this.name != null) return this.name;
 
-      this.name = profile.name;
+    const profile = await this.getProfile();
 
-      return profile.name;
-    }
+    this.name = profile.name;
+
+    return profile.name;
   }
 
   /**
@@ -75,7 +71,7 @@ export class Player {
    */
   public async getNameHistory(): Promise<Responses.NameHistory> {
     const uuid = await this.getUUID();
-    const target = Endpoints.get.nameHistory.replace(/({uuid})/g, uuid);
+    const target = endpoints.NAME_HISTORY.replace(/({uuid})/g, uuid);
     const res = await got(target);
     const body = JSON.parse(res.body) as Responses.NameHistory;
 
@@ -91,7 +87,7 @@ export class Player {
   public async getProfile(): Promise<Responses.Profile> {
     const uuid = await this.getUUID();
     const name = await this.getName();
-    const target = Endpoints.get.profile.replace(/({uuid})/g, uuid);
+    const target = endpoints.PROFILE.replace(/({uuid})/g, uuid);
 
     try {
       const res = await got(target);
@@ -99,25 +95,25 @@ export class Player {
       return body;
     } catch (err) {
       const texture: Skin = {
-        'timestamp' : 0,
-        'profileId' : uuid,
-        'profileName' : name,
-        'signatureRequired' : false,
-        'textures' : {
-          "SKIN" : {
+        timestamp: 0,
+        profileId: uuid,
+        profileName: name,
+        signatureRequired: false,
+        textures: {
+          SKIN: {
             // Steve
-            "url" : "http://textures.minecraft.net/texture/1a4af718455d4aab528e7a61f86fa25e6a369d1768dcb13f7df319a713eb810b"
-          }
-        }
+            url: 'http://textures.minecraft.net/texture/1a4af718455d4aab528e7a61f86fa25e6a369d1768dcb13f7df319a713eb810b',
+          },
+        },
       };
 
       return {
-        'id': uuid,
-        'name': name,
-        'properties':  [ {
-          "name" : "textures",
-          "value" : new Buffer(JSON.stringify(texture)).toString('base64')
-        } ]
+        id: uuid,
+        name,
+        properties: [{
+          name: 'textures',
+          value: Buffer.from(JSON.stringify(texture)).toString('base64'),
+        }],
       };
     }
   }
@@ -132,8 +128,8 @@ export class Player {
     const profile = await this.getProfile();
 
     if (profile.properties.length >= 1) {
-      let texture = profile.properties[0];
-      let parsed = Player.parseTexture(texture);
+      const texture = profile.properties[0];
+      const parsed = Player.parseTexture(texture);
 
       if (parsed.textures.SKIN) {
         const target = new URL(parsed.textures.SKIN.url);
@@ -142,9 +138,8 @@ export class Player {
 
         const res = await got(target.toString(), { body: 'buffer' });
         return Buffer.from(res.body);
-      } else {
-        throw new Error('No custom skin');
       }
+      throw new Error('No custom skin');
     } else {
       throw new Error('No custom skin');
     }
@@ -156,8 +151,8 @@ export class Player {
    */
   public async getHead(): Promise<Buffer> {
     const skin = await this.getSkin();
-    let image = sharp(skin);
-    let head = image
+    const image = sharp(skin);
+    const head = image
       .extract({
         top: 8,
         left: 8,
@@ -169,8 +164,7 @@ export class Player {
 
     return new Promise((resolve, reject) => {
       head.toBuffer(((err, buffer) => {
-        if (err)
-          reject(err);
+        if (err) reject(err);
         else {
           resolve(buffer);
         }
@@ -184,17 +178,16 @@ export class Player {
    * @throws {Error} if there is no custom skin
    */
   public async getSkinURL(): Promise<string> {
-    let profile = await this.getProfile();
+    const profile = await this.getProfile();
 
     if (profile.properties.length >= 1) {
-      let texture = profile.properties[0];
-      let parsed = Player.parseTexture(texture);
+      const texture = profile.properties[0];
+      const parsed = Player.parseTexture(texture);
 
       if (parsed.textures.SKIN) {
         return parsed.textures.SKIN.url;
-      } else {
-        throw new Error('No custom skin');
       }
+      throw new Error('No custom skin');
     } else {
       throw new Error('No custom skin');
     }

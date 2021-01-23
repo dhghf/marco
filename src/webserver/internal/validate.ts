@@ -1,7 +1,33 @@
-import { NextFunction, Router, Request, Response } from 'express';
-import { LogService } from "matrix-bot-sdk";
+import {
+  NextFunction, Router, Request, Response,
+} from 'express';
+import { LogService } from 'matrix-bot-sdk';
 
-import * as Errors from "./errors";
+import * as Errors from './errors';
+
+export function fail(res: Response, error: object): void {
+  res.status(400);
+  res.send(error);
+  res.end();
+}
+
+function errorHandler(req: Request, err: any): void {
+  // @ts-ignore
+  const { id } = req;
+  if (err instanceof Error) {
+    LogService.error(
+      'marco-webserver',
+      `Request ${id}`,
+      err.message,
+    );
+  } else {
+    LogService.error(
+      'marco-webserver',
+      `Request ${id}`,
+      err,
+    );
+  }
+}
 
 export function validatePost(router: Router, endpoint: string, callback: Function) {
   // this checks to make sure Polo is calling the endpoint properly
@@ -36,24 +62,6 @@ export function handleGet(router: Router, endpoint: string, callback: Function) 
   }));
 }
 
-function errorHandler(req: Request, err: any): void {
-  // @ts-ignore
-  const id = req['id'];
-  if (err instanceof Error) {
-    LogService.error(
-      'marco-webserver',
-      `Request ${id}`,
-      err.message,
-    );
-  } else {
-    LogService.error(
-      'marco-webserver',
-      `Request ${id}`,
-      err
-    );
-  }
-}
-
 /**
  * This checks the body of the request to make sure everything checks up
  * correctly.
@@ -63,62 +71,62 @@ function errorHandler(req: Request, err: any): void {
  */
 export function checkPlayerIntegrity(req: Request, res: Response, next: NextFunction) {
   // @ts-ignore
-  const reqID = req['id'];
-  const body = req.body;
+  const reqID = req.id;
+  const { body } = req;
 
   LogService.info(
     'WebInterface',
-    `[Request ${reqID}]: Checking Body Integrity`
+    `[Request ${reqID}]: Checking Body Integrity`,
   );
 
   // Check if body is defined
-  if (body == undefined) {
+  if (body === undefined) {
     fail(res, Errors.noBodyError);
     return;
   }
 
   // Check player
-  const player = body['player'];
-  if (player == undefined) {
+  const { player } = body;
+  if (player === undefined) {
     fail(res, Errors.noPlayerError);
     return;
-  } else if (!(typeof player == 'object')) {
+  } if (!(typeof player === 'object')) {
     fail(res, Errors.playerTypeError);
     return;
   }
 
   // Check <player>.name
-  const name = player.name;
-  if (name == undefined) {
+  const { name } = player;
+  if (name === undefined) {
     fail(res, Errors.noPlayerNameError);
     return;
-  } else if (!(typeof name == 'string')) {
+  } if (!(typeof name === 'string')) {
     fail(res, Errors.playerNameTypeError);
     return;
   }
 
   LogService.debug(
     'WebInterface',
-    `[Request ${reqID}]: Player name "${name}"`
+    `[Request ${reqID}]: Player name "${name}"`,
   );
 
   // Check <player>.uuid
-  const uuid = player.uuid;
-  if (uuid == undefined) {
+  const { uuid } = player;
+  if (uuid === undefined) {
     fail(res, Errors.noPlayerIdError);
-  } else if (!(typeof uuid == 'string')) {
+  } else if (!(typeof uuid === 'string')) {
     fail(res, Errors.playerIdTypeError);
     return;
   }
 
   LogService.debug(
     'WebInterface',
-    `[Request ${reqID}]: Player UUID "${uuid}"`
+    `[Request ${reqID}]: Player UUID "${uuid}"`,
   );
 
   LogService.info(
     'WebInterface',
-    `[Request ${reqID}]: Integrity Check Passed`
+    `[Request ${reqID}]: Integrity Check Passed`,
   );
 
   /**
@@ -132,10 +140,4 @@ export function checkPlayerIntegrity(req: Request, res: Response, next: NextFunc
    * }
    */
   next();
-}
-
-export function fail(res: Response, error: object): void {
-  res.status(400);
-  res.send(error);
-  res.end();
 }
