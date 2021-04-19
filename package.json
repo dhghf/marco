@@ -9,7 +9,7 @@
     "bent": "^7.3.1",
     "better-sqlite3": "^7.0.1",
     "express": "^4.17.1",
-    "jose": "^1.27.0",
+    "jose": "^1.28.1",
     "matrix-bot-sdk": "^0.5.4",
     "mkdirp": "^1.0.4",
     "sharp": "^0.25.3",
